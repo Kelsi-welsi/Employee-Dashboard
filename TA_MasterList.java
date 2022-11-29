@@ -18,9 +18,12 @@ import java.util.Arrays;
 public class TA_MasterList extends JPanel{
     private JScrollPane scrollPane;
     private TableRowSorter sorter;
+    public TableColumn col;
+    public JComboBox combo;
     private JTable table;
     private DefaultTableModel model;
     private JPanel pnlCommand;
+    public JLabel search = new JLabel("Search:");
     private JPanel pnlEntry;
     private JTextField txtID;
     private JTextField txtSearch;
@@ -43,6 +46,7 @@ public class TA_MasterList extends JPanel{
     private JButton cmdUp;
     private JButton cmdSend;
     private JButton cmdCancel;
+    public String status= "";
     public static int IDcount = 1;
     SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyy HH:mm");
     private ArrayList<Item> MList = new ArrayList<>();
@@ -50,7 +54,7 @@ public class TA_MasterList extends JPanel{
         
         pnlCommand = new JPanel();
         pnlEntry = new JPanel();
-        String[] columnNames = { "ID", "Date", "Type", "Title", "Description", "Employee","Priority",};
+        String[] columnNames = { "ID", "Date", "Type", "Title", "Description", "Employee","Priority","Status"};
         model = new DefaultTableModel(columnNames, 0);
         table = new JTable(model);
         sorter = new TableRowSorter<>(model);
@@ -61,11 +65,18 @@ public class TA_MasterList extends JPanel{
         table.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         table.setFillsViewportHeight(true);
         
+        String[] completionStatus = {"Not Started","Ongoing","Completed"};
+        combo = new JComboBox<String>(completionStatus);
+        /*combo.addActionListener(new ActionListener() {
+            public void actionPerformed (ActionEvent ae){
+                JOptionPane.showMessageDialog(null, combo.getSelectedItem());
+            }
+        });*/
+
+        col = table.getColumnModel().getColumn(7);
+        col.setCellEditor(new DefaultCellEditor(combo) );
 
         scrollPane = new JScrollPane(table);
-
-        //String[] completionStatus = {"Not Started","Ongoing","Completed"};
-
 
         pnlEntry.add(new JLabel("ADD WORKSHEET ITEM"));
 
@@ -108,6 +119,10 @@ public class TA_MasterList extends JPanel{
         cmdAdd.setSize(100,100);
         pnlEntry.add(cmdAdd);
 
+        cmdSend = new JButton("Send to Employees");
+        cmdSend.addActionListener(new SendButtonListener());
+        pnlCommand.add(cmdSend);
+
         cmdDel = new JButton("Delete Item");
         cmdDel.addActionListener(new DelButtonListener());
         pnlCommand.add(cmdDel);
@@ -116,14 +131,9 @@ public class TA_MasterList extends JPanel{
         cmdUp.addActionListener(new UpdateButtonListener());
         pnlCommand.add(cmdUp);
 
-        cmdSend = new JButton("Send to Employees");
-        cmdSend.addActionListener(new SendButtonListener());
-        pnlCommand.add(cmdSend);
-
-        pnlCommand.add(new JLabel("Search:"));
+        pnlCommand.add(search);
         txtSearch = new JTextField(20);
         pnlCommand.add(txtSearch);
-
 
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -191,6 +201,7 @@ public class TA_MasterList extends JPanel{
                 title = txtTitle.getText();
                 description = txtDes.getText();
                 priority = Priority.getItemAt(Priority.getSelectedIndex());
+
                 int first = 0;
                 for (int i = 0; i < names.length; i++) {
                     if (Employees[i].isSelected())
@@ -201,7 +212,7 @@ public class TA_MasterList extends JPanel{
                             first++;
                         }
                         else{
-                            employee+="," + names[i];
+                            employee+=" , " + names[i];
                         }
                     }       
                 }
@@ -239,6 +250,7 @@ public class TA_MasterList extends JPanel{
             
                 if (AddOrUpdate==0)
                     MList.add(app);
+
                 else if (AddOrUpdate==1){
                     if (listPos!=-1){
                         MList.remove(listPos); 
@@ -246,11 +258,16 @@ public class TA_MasterList extends JPanel{
                     }  
                     model.removeRow(tablePos);
                 }
-                    
-                String[] item = {id, date, type, title, description, employee, priority};
 
                 if (AddOrUpdate==0)
+                    status = "Select...";
+
+                String[] item = {id, date, type, title, description, employee, priority, status};
+
+                if (AddOrUpdate==0){
                     model.addRow(item);
+                }
+                    
                 else if (AddOrUpdate==1)
                     model.insertRow(tablePos, item);
 
@@ -267,9 +284,13 @@ public class TA_MasterList extends JPanel{
                 }
                 if (AddOrUpdate==1){
                     pnlEntry.remove(cmdCancel);
-                    cmdAdd.setText("Add Appointment");
+                    cmdAdd.setText("Add Item");
+                    pnlCommand.add(cmdSend);
                     pnlCommand.add(cmdDel);
                     pnlCommand.add(cmdUp);
+                    pnlCommand.add(search);
+                    pnlCommand.add(txtSearch);
+                    
                 }
                 AddOrUpdate = 0;
             }
@@ -318,6 +339,10 @@ public class TA_MasterList extends JPanel{
                 cmdAdd.setText("Update");
                 pnlCommand.remove(cmdDel);
                 pnlCommand.remove(cmdUp);
+                pnlCommand.remove(cmdSend);
+                pnlCommand.remove(txtSearch);
+                pnlCommand.remove(search);
+
                 cmdCancel = new JButton("Cancel");
                 cmdCancel.addActionListener(new CancelButtonListener());
                 pnlEntry.add(cmdCancel);
@@ -330,13 +355,13 @@ public class TA_MasterList extends JPanel{
                 String description = model.getValueAt(pos, 4).toString();
                 String employee = model.getValueAt(pos, 5).toString();
                 String priority = model.getValueAt(pos, 6).toString();
+                status = model.getValueAt(pos, 7).toString();
                 //model.removeRow(pos);
                 Item delData = new Item(id, date, type, title, description, employee, priority);
                 //cacheApp = upData;
                 int upPos=-1;
                 for (Item a:MList){
-                    if (a.getid()==delData.getid() && a.getDate().equals(delData.getDate()) && a.getType().equals(delData.getType()) 
-                        && a.getTitle().equals(delData.getTitle()) && a.getDescription().equals(delData.getDescription()) && a.getEmployees().equals(delData.getEmployees()) && a.getPriority().equals(delData.getPriority())){
+                    if (a.getid()==delData.getid()){
                             upPos = MList.indexOf(a);
                     }
                 }
@@ -352,7 +377,7 @@ public class TA_MasterList extends JPanel{
                 else
                     txtDes.setText(description);
 
-                String[] selEmployees = employee.split(",");
+                String[] selEmployees = employee.split(" , ");
                 for (String i:selEmployees) {
                     for (JCheckBox a:Employees){
                         if (i.equals(a.getText()))
@@ -377,8 +402,11 @@ public class TA_MasterList extends JPanel{
             }
             pnlEntry.remove(cmdCancel);
             cmdAdd.setText("Add Appointment");
+            pnlCommand.add(cmdSend);
             pnlCommand.add(cmdDel);
             pnlCommand.add(cmdUp);
+            pnlCommand.add(search);
+            pnlCommand.add(txtSearch);
         }
     }
 
