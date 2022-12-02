@@ -18,6 +18,15 @@ import java.util.Arrays;
 import java.net.*;
 import java.io.*;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.text.ParseException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.sql.DriverManager;
 
 public class TA_MasterList extends JPanel{
@@ -54,9 +63,11 @@ public class TA_MasterList extends JPanel{
     private JButton cmdDel;
     private JButton cmdUp;
     private JButton cmdSend;
+    private JButton cmdRef;
     private JButton cmdCancel;
     public String status= "";
     public static int IDcount = 0;
+    public static int SaveAlready =0;
     SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyy HH:mm");
     private ArrayList<Item> MList = new ArrayList<>();
 
@@ -134,7 +145,11 @@ public class TA_MasterList extends JPanel{
         cmdAdd.setSize(100,100);
         pnlEntry.add(cmdAdd);
 
-        cmdSend = new JButton("Send to Employees");
+        cmdRef = new JButton("Refresh");
+        cmdRef.addActionListener(new RefreshButtonListener());
+        pnlCommand.add(cmdRef);
+
+        cmdSend = new JButton("Save Changes");
         cmdSend.addActionListener(new SendButtonListener());
         pnlCommand.add(cmdSend);
 
@@ -495,6 +510,26 @@ public class TA_MasterList extends JPanel{
                 description = txtDes.getText();
                 priority = Priority.getItemAt(Priority.getSelectedIndex());
 
+                if (date.equals("")){
+                    error = "emptyDate";
+                    throw new Exception();
+                }
+
+                DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                SimpleDateFormat sdfrmt = new SimpleDateFormat("dd/MM/yyyy");
+                
+                error = "DateFormat";
+                Date javaDate = sdfrmt.parse(date); 
+                LocalDate dateFormat = LocalDate.parse(date, df);
+                LocalDate today = java.time.LocalDate.now();
+                if (dateFormat.isBefore(today)){
+                    
+                    throw new Exception();
+                }
+                        
+                
+                
+
                 int first = 0;
                 for (int i = 0; i < names.length; i++) {
                     if (Employees[i].isSelected())
@@ -518,8 +553,8 @@ public class TA_MasterList extends JPanel{
             
                 //if (id.equals(""))
                 //    id = "-";
-                if (date.equals(""))
-                    date = "-";
+                
+                    
                 if (type.equals("")){
                     error = "emptyType";
                     throw new Exception();
@@ -581,6 +616,7 @@ public class TA_MasterList extends JPanel{
                 if (AddOrUpdate==1){
                     pnlEntry.remove(cmdCancel);
                     cmdAdd.setText("Add Item");
+                    pnlCommand.add(cmdRef);
                     pnlCommand.add(cmdSend);
                     pnlCommand.add(cmdDel);
                     pnlCommand.add(cmdUp);
@@ -606,36 +642,53 @@ public class TA_MasterList extends JPanel{
                     JOptionPane.showMessageDialog(null, "No Type was Selected");
                 if (error.equals("emptyPriority"))
                     JOptionPane.showMessageDialog(null, "No Priority was Selected");
+                if (error.equals("emptyDate"))
+                    JOptionPane.showMessageDialog(null, "No Date was Entered");
+                if (error.equals("BeforeToday"))
+                    JOptionPane.showMessageDialog(null, "Date is Before Today");
+                if (error.equals("DateFormat"))
+                    JOptionPane.showMessageDialog(null, "Invalid Date Format");
+            
             } 
         }
     }
 
     private class DelButtonListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            if (table.getSelectedRow() != -1) {
-                int pos = table.getSelectedRow();
-                String id = model.getValueAt(pos, 0).toString();
-                String date = model.getValueAt(pos, 1).toString();
-                String type = model.getValueAt(pos, 2).toString();
-                String title = model.getValueAt(pos, 3).toString();
-                String description = model.getValueAt(pos, 4).toString();
-                String employee = model.getValueAt(pos, 5).toString();
-                String priority = model.getValueAt(pos, 6).toString();
-                String status = model.getValueAt(pos, 7).toString();
-
-                model.removeRow(pos);
-                Item delData = new Item(id, date, type, title, description, employee, priority, status);
-                int delPos=-1;
-                for (Item a:MList){
-                    if (a.getid()==delData.getid() /*&& a.getDate().equals(delData.getDate()) && a.getType().equals(delData.getType()) 
-                        && a.getTitle().equals(delData.getTitle()) && a.getDescription().equals(delData.getDescription()) && a.getEmployees().equals(delData.getEmployees()) && a.getPriority().equals(delData.getPriority())*/){
-                            delPos = MList.indexOf(a);
+            String ObjButtons[] = {"Yes","No"};
+            int PromptResult = JOptionPane.showOptionDialog(null,"Would you like to Save Before Quitting?","Online Examination System",JOptionPane.DEFAULT_OPTION,JOptionPane.WARNING_MESSAGE,null,ObjButtons,ObjButtons[1]);
+            if(PromptResult==JOptionPane.YES_OPTION)
+            {
+                if (table.getSelectedRow() != -1) {
+                    int pos = table.getSelectedRow();
+                    String id = model.getValueAt(pos, 0).toString();
+                    String date = model.getValueAt(pos, 1).toString();
+                    String type = model.getValueAt(pos, 2).toString();
+                    String title = model.getValueAt(pos, 3).toString();
+                    String description = model.getValueAt(pos, 4).toString();
+                    String employee = model.getValueAt(pos, 5).toString();
+                    String priority = model.getValueAt(pos, 6).toString();
+                    String status = model.getValueAt(pos, 7).toString();
+    
+                    model.removeRow(pos);
+                    Item delData = new Item(id, date, type, title, description, employee, priority, status);
+                    int delPos=-1;
+                    for (Item a:MList){
+                        if (a.getid()==delData.getid() /*&& a.getDate().equals(delData.getDate()) && a.getType().equals(delData.getType()) 
+                            && a.getTitle().equals(delData.getTitle()) && a.getDescription().equals(delData.getDescription()) && a.getEmployees().equals(delData.getEmployees()) && a.getPriority().equals(delData.getPriority())*/){
+                                delPos = MList.indexOf(a);
+                        }
                     }
+                    if (delPos >=0)
+                        MList.remove(delPos);
+                        DeleteRecord(delData);
                 }
-                if (delPos >=0)
-                    MList.remove(delPos);
-                    DeleteRecord(delData);
             }
+            if(PromptResult==JOptionPane.NO_OPTION)
+            {
+                JOptionPane.getRootFrame().dispose();
+            }
+            
         
         }
     }
@@ -645,6 +698,7 @@ public class TA_MasterList extends JPanel{
             if (table.getSelectedRow() != -1) {
                 AddOrUpdate=1;
                 cmdAdd.setText("Update");
+                pnlCommand.remove(cmdRef);
                 pnlCommand.remove(cmdDel);
                 pnlCommand.remove(cmdUp);
                 pnlCommand.remove(cmdSend);
@@ -720,15 +774,26 @@ public class TA_MasterList extends JPanel{
 
     private class SendButtonListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            //Code for sedning to server here?
+            //Code for sedning updates to server here
+            SaveAlready = 0;
             UpdateStatuses();
+            JOptionPane.showMessageDialog(null, "Saved");
+        }
+    }
+
+    private class RefreshButtonListener implements ActionListener{
+        public void actionPerformed(ActionEvent e) {
+            model.setRowCount(0);
+            MList = LoadRecords();
+            addToTable(MList);
         }
     }
 
 
-    private static void ShowMasterGUI() {
+    public static void ShowMasterGUI() {
         //Create and set up the window.
         JFrame frame = new JFrame("Master List");
+        frame.setPreferredSize(new Dimension(1400,800));
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
 
@@ -738,16 +803,21 @@ public class TA_MasterList extends JPanel{
             public void windowClosing(WindowEvent we)
             { 
                 String ObjButtons[] = {"Yes","No"};
-                int PromptResult = JOptionPane.showOptionDialog(null,"Would you like to Save Before Quitting?","Online Examination System",JOptionPane.DEFAULT_OPTION,JOptionPane.WARNING_MESSAGE,null,ObjButtons,ObjButtons[1]);
-                if(PromptResult==JOptionPane.YES_OPTION)
-                {
-                    newContentPane.UpdateStatuses();
-                    System.exit(0);
+                if (SaveAlready==0){
+                    int PromptResult = JOptionPane.showOptionDialog(null,"Would you like to Save Before Quitting?","Online Examination System",JOptionPane.DEFAULT_OPTION,JOptionPane.WARNING_MESSAGE,null,ObjButtons,ObjButtons[1]);
+                    if(PromptResult==JOptionPane.YES_OPTION)
+                    {
+                        newContentPane.UpdateStatuses();
+                        System.exit(0);
+                    }
+                    if(PromptResult==JOptionPane.NO_OPTION)
+                    {
+                        System.exit(0);
+                    }
                 }
-                if(PromptResult==JOptionPane.NO_OPTION)
-                {
+                else
                     System.exit(0);
-                }
+
             }   
         });
 
