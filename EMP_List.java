@@ -32,13 +32,18 @@ public class EMP_List extends JPanel{
     private JTextField txtSearch;
     private JButton cmdSave;
     private JButton cmdRef;
+    private JButton cmdHide;
+    private JButton cmdShow;
     public int tablePos = -1;
     public int listPos = -1;
-    public static int SavedAlready = 0;
+    public String Empcode;
+    public static int SavedAlready = 1;
+    //public static int ShowCompleted = 0;
     SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyy HH:mm");
     private ArrayList<Item> MList = new ArrayList<>();
-    public EMP_List() {
+    public EMP_List(String Emp) {
         
+        Empcode = Emp;
         pnlCommand = new JPanel();
         pnlEntry = new JPanel();
         String[] columnNames = { "ID", "Date", "Type", "Title", "Description", "Priority", "Status"};
@@ -46,13 +51,22 @@ public class EMP_List extends JPanel{
         table = new JTable(model);
         sorter = new TableRowSorter<>(model);
         table.setRowSorter(sorter);
-        MList = LoadRecords();
+        MList = LoadRecords(Emp);
         addToTable(MList);
 
         cmdSave = new JButton("Save Changes");
         cmdSave.addActionListener(new SaveButtonListener());
         pnlCommand.add(cmdSave);
         cmdSave.setVisible(false);
+
+        cmdHide = new JButton("Hide Completed Items");
+        cmdHide.addActionListener(new HideCompButtonListener());
+        pnlCommand.add(cmdHide);
+
+        cmdShow = new JButton("Show Completed Items");
+        cmdShow.addActionListener(new ShowCompButtonListener());
+        pnlCommand.add(cmdShow);
+        cmdShow.setVisible(false);
 
         add(table);
         table.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -63,6 +77,7 @@ public class EMP_List extends JPanel{
         combo.addActionListener(new ActionListener() {
             public void actionPerformed (ActionEvent ae){
                 //JOptionPane.showMessageDialog(null, combo.getSelectedItem());
+                SavedAlready = 0;
                 cmdSave.setVisible(true);
                 
             }
@@ -118,10 +133,26 @@ public class EMP_List extends JPanel{
 
     private void addToTable(ArrayList<Item> aList){
         if (aList.size() > 0) {
-            for (Item a : aList){
+            /*for (Item a : aList){
                     String[] item = {a.getid(), a.getDate(), a.getType(), a.getTitle(), a.getDescription(),a.getPriority(),a.getStatus()};
                     model.addRow(item);
+            }*/
+            for (Item a : aList){
+                String[] item = {a.getid(), a.getDate(), a.getType(), a.getTitle(), a.getDescription(),a.getPriority(),a.getStatus()};
+                if (a.getPriority().equals("High"))
+                    model.addRow(item);
             }
+            for (Item a : aList){
+                String[] item = {a.getid(), a.getDate(), a.getType(), a.getTitle(), a.getDescription(),a.getPriority(),a.getStatus()};
+                if (a.getPriority().equals("Medium"))
+                    model.addRow(item);
+            }
+            for (Item a : aList){
+                String[] item = {a.getid(), a.getDate(), a.getType(), a.getTitle(), a.getDescription(),a.getPriority(),a.getStatus()};
+                if (a.getPriority().equals("Low"))
+                    model.addRow(item);
+            }
+
         }
     }
 
@@ -184,7 +215,7 @@ public class EMP_List extends JPanel{
         }
     }
 
-    public ArrayList<Item> LoadRecords(){
+    public ArrayList<Item> LoadRecords(String Emp){
         Connection conn= null;
         Statement stmt = null;
         ResultSet rs = null;
@@ -199,7 +230,6 @@ public class EMP_List extends JPanel{
             //System.out.println("You are now connected to the database");
             //System.out.println("Inserting data or recrods");
             stmt = conn.createStatement();
-            
 
             String sql = "SELECT * FROM TA_MasterList";
             rs = stmt.executeQuery(sql);
@@ -215,11 +245,10 @@ public class EMP_List extends JPanel{
                 String Status = rs.getString("Status");
                 
                 Item item = new Item(ID, Date, Type, Title, Description, Employees, Priority, Status);
-                DB_List.add(item); 
-                
-                    
+                if (item.getEmployees().contains(Emp)){
+                    DB_List.add(item);
+                }           
             }
-            
             //System.out.println("Everything has been read");
         }
         catch(SQLException se){
@@ -250,6 +279,9 @@ public class EMP_List extends JPanel{
     private class SaveButtonListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
             UpdateStatuses();
+            model.setRowCount(0);
+            MList = LoadRecords(Empcode);
+            addToTable(MList);
             SavedAlready=1;
             JOptionPane.showMessageDialog(null, "Saved");
             cmdSave.setVisible(false);
@@ -259,16 +291,52 @@ public class EMP_List extends JPanel{
     private class RefreshButtonListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
             //Code for sending back to MasterList here?
-            pnlCommand.remove(cmdSave);
+            model.setRowCount(0);
+            MList = LoadRecords(Empcode);
+            addToTable(MList);
+
         }
     }
 
-    private static void ShowEmpGUI() {
-        //Create and set up the window.
-        JFrame frame = new JFrame("Worksheet");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    private class HideCompButtonListener implements ActionListener{
+        public void actionPerformed(ActionEvent e) {
+            
+            model.setRowCount(0);
+            if (MList.size() > 0) {
+                for (Item a : MList){
+                    String[] item = {a.getid(), a.getDate(), a.getType(), a.getTitle(), a.getDescription(),a.getPriority(),a.getStatus()};
+                    if (!a.getStatus().equals("Completed"))
+                        model.addRow(item);
+                }
+            }
+            cmdHide.setVisible(false);
+            cmdShow.setVisible(true);
+        }
+    }
 
-        EMP_List newContentPane = new EMP_List();
+    private class ShowCompButtonListener implements ActionListener{
+        public void actionPerformed(ActionEvent e) {
+            
+            model.setRowCount(0);
+            if (MList.size() > 0) {
+                for (Item a : MList){
+                    String[] item = {a.getid(), a.getDate(), a.getType(), a.getTitle(), a.getDescription(),a.getPriority(),a.getStatus()};
+                        model.addRow(item);
+                }
+            }
+            cmdShow.setVisible(false);
+            cmdHide.setVisible(true);
+            
+        }
+    }
+
+    public static void ShowEmpGUI(String Emp) {
+        //Create and set up the window.
+        JFrame frame = new JFrame(Emp + " Worksheet");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setPreferredSize(new Dimension(1400,800));
+
+        EMP_List newContentPane = new EMP_List(Emp);
 
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(WindowEvent we)
@@ -304,7 +372,7 @@ public class EMP_List extends JPanel{
     public static void main(String[] args) {
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
                 public void run() {
-                    ShowEmpGUI();
+                    ShowEmpGUI("DL");
                 }
             });
     }
